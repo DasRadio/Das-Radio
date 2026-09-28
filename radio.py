@@ -19,7 +19,6 @@ def get_songs():
 
 class RadioStreamHandler(BaseHTTPRequestHandler):
     def do_GET(self):
-        # Render health check
         if self.path == '/health':
             self.send_response(200)
             self.send_header('Content-Type', 'text/plain')
@@ -27,23 +26,23 @@ class RadioStreamHandler(BaseHTTPRequestHandler):
             self.wfile.write(b"OK")
             return
 
-        # Live Radio Stream Headers (Seeking disable karne ke liye)
         self.send_response(200)
         self.send_header('Content-Type', 'audio/mpeg')
-        self.send_header('Accept-Ranges', 'none')  # Yeh browser ko aage-piche karne se rogega
+        self.send_header('Accept-Ranges', 'none')
         self.send_header('Cache-Control', 'no-cache, no-store, must-revalidate')
-        self.send_header('Pragma', 'no-cache')
-        self.send_header('Expires', '0')
         self.end_headers()
         
         try:
+            playlist = []
             while True:
-                songs = get_songs()
-                if not songs:
-                    time.sleep(2)
-                    continue
+                if not playlist:
+                    playlist = get_songs()
+                    random.shuffle(playlist)  # Gano ko mix kar dega taaki repeat na ho
+                    if not playlist:
+                        time.sleep(2)
+                        continue
                 
-                current_song = random.choice(songs)
+                current_song = playlist.pop(0)
                 try:
                     with open(current_song, 'rb') as f:
                         while True:

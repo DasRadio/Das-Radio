@@ -4,7 +4,6 @@ import subprocess
 import threading
 from http.server import HTTPServer, BaseHTTPRequestHandler
 
-# Render ke liye chhota HTTP server taaki port error na aaye
 class HealthCheckHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         self.send_response(200)
@@ -16,10 +15,8 @@ def start_web_server():
     server = HTTPServer(("0.0.0.0", port), HealthCheckHandler)
     server.serve_forever()
 
-# Background mein web server start kar rahe hain
 threading.Thread(target=start_web_server, daemon=True).start()
 
-# Music folder ka rasta
 MUSIC_FOLDER = os.path.join(os.path.dirname(__file__), "Music")
 
 if not os.path.exists(MUSIC_FOLDER):
@@ -38,7 +35,6 @@ print(f"Songs found: {len(songs)}")
 
 while True:
     if not songs:
-        # Agar gaane nahi milte toh thodi der wait karega
         import time
         time.sleep(5)
         songs = [
@@ -52,6 +48,5 @@ while True:
     song_name = os.path.basename(current_song)
     print(f"Now Playing: {song_name}")
     
-    # Simulate playing loop for cloud stability
     import time
     time.sleep(10)

@@ -8,12 +8,11 @@ MUSIC_FOLDER = os.path.join(os.path.dirname(__file__), "Music")
 if not os.path.exists(MUSIC_FOLDER):
     os.makedirs(MUSIC_FOLDER)
 
-# Global buffer sabhi listeners ke liye live stream sync rakhne ke liye
-stream_buffer = bytearray()
+current_stream_data = bytearray()
 buffer_lock = threading.Lock()
 
 def global_radio_broadcaster():
-    global stream_buffer
+    global current_stream_data
     played_history = []
     
     while True:
@@ -28,7 +27,7 @@ def global_radio_broadcaster():
                 time.sleep(2)
                 continue
             
-            # Random shuffle aur recent gano ko repeat hone se rokne ke liye logic
+            # Random shuffle aur 2 ghante ke andar gana repeat na ho uska logic
             available = [s for s in songs if s not in played_history]
             if not available:
                 played_history.clear()
@@ -49,17 +48,18 @@ def global_radio_broadcaster():
                     if not chunk:
                         break
                     with buffer_lock:
-                        stream_buffer.extend(chunk)
-                        # Buffer size control mein rakhne ke liye purana data hata dein
-                        if len(stream_buffer) > 262144:
-                            del stream_buffer[:4096]
-                    # Real-time smooth streaming ke liye pacing
-                    time.sleep(0.012)
+                        current_stream_data.extend(chunk)
+                        # Buffer size limit mein rakhein
+                        if len(current_stream_data) > 131072:
+                            del current_stream_data[:4096]
+                    
+                    # Real-time audio pacing (Standard 128kbps speed match karne ke liye)
+                    time.sleep(0.25)
         except Exception as e:
             print(f"Error: {e}")
             time.sleep(2)
 
-# Background mein live radio thread chalu kar dein
+# Background mein live radio thread shuru karein
 threading.Thread(target=global_radio_broadcaster, daemon=True).start()
 
 class RadioStreamHandler(BaseHTTPRequestHandler):
@@ -78,14 +78,14 @@ class RadioStreamHandler(BaseHTTPRequestHandler):
         self.end_headers()
         
         with buffer_lock:
-            sent_index = max(0, len(stream_buffer) - 32768)
+            sent_index = max(0, len(current_stream_data) - 16384)
         
         try:
             while True:
                 with buffer_lock:
-                    current_len = len(stream_buffer)
+                    current_len = len(current_stream_data)
                     if current_len > sent_index:
-                        data = bytes(stream_buffer[sent_index:current_len])
+                        data = bytes(current_stream_data[sent_index:current_len])
                         sent_index = current_len
                     else:
                         data = b""
@@ -94,7 +94,7 @@ class RadioStreamHandler(BaseHTTPRequestHandler):
                     self.wfile.write(data)
                     self.wfile.flush()
                 else:
-                    time.sleep(0.05)
+                    time.sleep(0.1)
         except (BrokenPipeError, ConnectionResetError):
             return
         except Exception:

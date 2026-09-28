@@ -1,5 +1,4 @@
 import os
-import random
 import time
 from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 
@@ -9,11 +8,11 @@ if not os.path.exists(MUSIC_FOLDER):
 
 def get_songs():
     try:
-        return [
+        return sorted([
             os.path.join(MUSIC_FOLDER, f)
             for f in os.listdir(MUSIC_FOLDER)
             if f.lower().endswith(".mp3")
-        ]
+        ])
     except Exception:
         return []
 
@@ -28,31 +27,29 @@ class RadioStreamHandler(BaseHTTPRequestHandler):
 
         self.send_response(200)
         self.send_header('Content-Type', 'audio/mpeg')
-        self.send_header('Accept-Ranges', 'none')
-        self.send_header('Cache-Control', 'no-cache, no-store, must-revalidate')
         self.end_headers()
         
         try:
-            playlist = []
             while True:
-                if not playlist:
-                    playlist = get_songs()
-                    random.shuffle(playlist)  # Gano ko mix kar dega taaki repeat na ho
-                    if not playlist:
-                        time.sleep(2)
-                        continue
+                songs = get_songs()
+                if not songs:
+                    time.sleep(2)
+                    continue
                 
-                current_song = playlist.pop(0)
-                try:
-                    with open(current_song, 'rb') as f:
-                        while True:
-                            chunk = f.read(8192)
-                            if not chunk:
-                                break
-                            self.wfile.write(chunk)
-                            self.wfile.flush()
-                except Exception:
-                    break
+                # Gaane ek ke baad ek line se chalenge, random change nahi hoga
+                for current_song in songs:
+                    try:
+                        with open(current_song, 'rb') as f:
+                            while True:
+                                chunk = f.read(8192)
+                                if not chunk:
+                                    break
+                                self.wfile.write(chunk)
+                                self.wfile.flush()
+                    except (BrokenPipeError, ConnectionResetError):
+                        return
+                    except Exception:
+                        continue
         except Exception:
             return
 

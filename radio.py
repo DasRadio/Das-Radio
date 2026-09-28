@@ -19,7 +19,7 @@ def get_songs():
 
 class RadioStreamHandler(BaseHTTPRequestHandler):
     def do_GET(self):
-        # Agar Render health check ke liye /health par aaye
+        # Render health check
         if self.path == '/health':
             self.send_response(200)
             self.send_header('Content-Type', 'text/plain')
@@ -27,10 +27,12 @@ class RadioStreamHandler(BaseHTTPRequestHandler):
             self.wfile.write(b"OK")
             return
 
-        # Jab app ya browser seedha main URL (/) khole, toh MP3 audio stream ho
+        # Continuous Radio Stream
         self.send_response(200)
         self.send_header('Content-Type', 'audio/mpeg')
-        self.send_header('Cache-Control', 'no-cache')
+        self.send_header('Cache-Control', 'no-cache, no-store, must-revalidate')
+        self.send_header('Pragma', 'no-cache')
+        self.send_header('Expires', '0')
         self.end_headers()
         
         try:
@@ -40,17 +42,18 @@ class RadioStreamHandler(BaseHTTPRequestHandler):
                     time.sleep(2)
                     continue
                 
+                # Ek random song chun kar pura play karega bina beech mein kate
                 current_song = random.choice(songs)
-                with open(current_song, 'rb') as f:
-                    while True:
-                        chunk = f.read(8192)
-                        if not chunk:
-                            break
-                        try:
+                try:
+                    with open(current_song, 'rb') as f:
+                        while True:
+                            chunk = f.read(8192)
+                            if not chunk:
+                                break
                             self.wfile.write(chunk)
                             self.wfile.flush()
-                        except (BrokenPipeError, ConnectionResetError):
-                            return
+                except Exception:
+                    break
         except Exception:
             return
 

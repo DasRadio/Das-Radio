@@ -19,15 +19,15 @@ def get_songs():
 
 class RadioStreamHandler(BaseHTTPRequestHandler):
     def do_GET(self):
-        # Render health check ya browser ke liye root check
-        if self.path == '/health' or self.path == '/':
+        # Agar Render health check ke liye /health par aaye
+        if self.path == '/health':
             self.send_response(200)
             self.send_header('Content-Type', 'text/plain')
             self.end_headers()
-            self.wfile.write(b"Radio Server is Live and Streaming!")
+            self.wfile.write(b"OK")
             return
 
-        # Audio stream ke liye
+        # Jab app ya browser seedha main URL (/) khole, toh MP3 audio stream ho
         self.send_response(200)
         self.send_header('Content-Type', 'audio/mpeg')
         self.send_header('Cache-Control', 'no-cache')
@@ -60,7 +60,7 @@ class RadioStreamHandler(BaseHTTPRequestHandler):
 def run_server():
     port = int(os.environ.get("PORT", 10000))
     server = ThreadingHTTPServer(("0.0.0.0", port), RadioStreamHandler)
-    print(f"Server started on port {port}")
+    print(f"Radio stream server started on port {port}")
     server.serve_forever()
 
 if __name__ == "__main__":
